@@ -38,6 +38,9 @@
     .brand h1 { margin:0; font-size:1.15rem; letter-spacing:.01em; }
     .brand p { margin:3px 0 0; color:var(--muted); font-size:.82rem; }
     input[type=file] { display:none; }
+    .dropzone { transition:.15s ease; }
+    .dropzone.dragover { outline:3px solid var(--mint); outline-offset:2px; background:#e8faf3; }
+    .upload-link { pointer-events:auto; color:var(--mint-dark); font-weight:700; text-decoration:underline; cursor:pointer; }
     .button {
       border:1px solid #8ed7bd;
       background:var(--mint);
@@ -122,12 +125,12 @@
     </header>
 
     <main>
-      <div id="viewer"></div>
+      <div id="viewer" class="dropzone"></div>
       <div id="empty" class="empty">
         <div class="empty-card">
           <div class="cube">◇</div>
           <h2>Välj en STL-fil</h2>
-          <p>Filen läses lokalt i din webbläsare och skickas inte till någon server.</p>
+          <p>Släpp en STL-fil här, eller <label class="upload-link" for="file">klicka här för att välja en fil</label>. Filen läses lokalt i din webbläsare och skickas inte till någon server.</p>
         </div>
       </div>
       <div id="status" class="status">Ingen modell inläst</div>
@@ -226,8 +229,7 @@
       model = null;
     }
 
-    fileInput.addEventListener("change", async (event) => {
-      const file = event.target.files?.[0];
+    async function loadFile(file) {
       if (!file) return;
 
       if (!file.name.toLowerCase().endsWith(".stl")) {
@@ -252,7 +254,6 @@
         model = new THREE.Mesh(geometry, material);
         scene.add(model);
 
-        // Center the model around its bounding-box center.
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         model.position.sub(center);
@@ -264,6 +265,31 @@
         console.error(error);
         status.textContent = "Kunde inte läsa STL-filen.";
       }
+    }
+
+    fileInput.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      await loadFile(file);
+    });
+
+    viewer.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      viewer.classList.add("dragover");
+    });
+
+    viewer.addEventListener("dragleave", (event) => {
+      if (!viewer.contains(event.relatedTarget)) viewer.classList.remove("dragover");
+    });
+
+    viewer.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      viewer.classList.remove("dragover");
+      const file = [...(event.dataTransfer?.files || [])].find(f => f.name.toLowerCase().endsWith(".stl"));
+      if (!file) {
+        status.textContent = "Släpp en STL-fil (.stl).";
+        return;
+      }
+      await loadFile(file);
     });
 
     resetButton.addEventListener("click", () => {
