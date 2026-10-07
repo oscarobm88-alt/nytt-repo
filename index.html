@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STL Viewer</title>
+  <style>
+    :root {
+      --mint: #98e2c4;
+      --mint-dark: #24785f;
+      --bg: #f4fbf8;
+      --panel: rgba(255,255,255,.92);
+      --text: #17352c;
+      --muted: #688078;
+      --border: #d7ebe3;
+    }
+    * { box-sizing: border-box; }
+    html, body { width:100%; height:100%; margin:0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .app { height:100%; display:flex; flex-direction:column; }
+    header {
+      min-height:72px;
+      display:flex;
+      align-items:center;
+      gap:16px;
+      padding:14px 20px;
+      background:var(--panel);
+      border-bottom:1px solid var(--border);
+      box-shadow:0 2px 14px rgba(36,120,95,.08);
+      z-index:2;
+    }
+    .brand { margin-right:auto; }
+    .brand h1 { margin:0; font-size:1.15rem; letter-spacing:.01em; }
+    .brand p { margin:3px 0 0; color:var(--muted); font-size:.82rem; }
+    input[type=file] { display:none; }
+    .button {
+      border:1px solid #8ed7bd;
+      background:var(--mint);
+      color:#123d31;
+      padding:10px 16px;
+      border-radius:10px;
+      font-weight:700;
+      cursor:pointer;
+      transition:.15s ease;
+    }
+    .button:hover { transform:translateY(-1px); filter:brightness(.98); }
+    .button.secondary { background:#fff; border-color:var(--border); color:var(--text); }
+    main { position:relative; flex:1; min-height:0; }
+    #viewer { position:absolute; inset:0; touch-action:none; }
+    .empty {
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      pointer-events:none;
+      padding:24px;
+    }
+    .empty-card {
+      text-align:center;
+      max-width:460px;
+      padding:34px;
+      background:rgba(255,255,255,.9);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow:0 10px 35px rgba(36,120,95,.10);
+    }
+    .cube {
+      width:64px; height:64px; margin:0 auto 16px;
+      display:grid; place-items:center;
+      border-radius:16px;
+      background:var(--mint);
+      font-size:30px;
+    }
+    .empty h2 { margin:0 0 8px; font-size:1.25rem; }
+    .empty p { margin:0; color:var(--muted); line-height:1.5; }
+    .status {
+      position:absolute;
+      left:16px; bottom:16px;
+      max-width:calc(100% - 32px);
+      padding:9px 12px;
+      border-radius:10px;
+      background:rgba(255,255,255,.9);
+      border:1px solid var(--border);
+      color:var(--muted);
+      font-size:.82rem;
+      backdrop-filter:blur(8px);
+    }
+    .help {
+      position:absolute;
+      right:16px; bottom:16px;
+      padding:9px 12px;
+      border-radius:10px;
+      background:rgba(255,255,255,.88);
+      border:1px solid var(--border);
+      color:var(--muted);
+      font-size:.78rem;
+      backdrop-filter:blur(8px);
+    }
+    @media (max-width:600px) {
+      header { padding:12px; }
+      .brand p { display:none; }
+      .help { display:none; }
+      .status { bottom:12px; left:12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <h1>STL Viewer</h1>
+        <p>Visa 3D-modeller direkt i webbläsaren</p>
+      </div>
+      <label class="button" for="file">Välj STL-fil</label>
+      <input id="file" type="file" accept=".stl,model/stl" />
+      <button id="reset" class="button secondary" type="button">Återställ vy</button>
+    </header>
+
+    <main>
+      <div id="viewer"></div>
+      <div id="empty" class="empty">
+        <div class="empty-card">
+          <div class="cube">◇</div>
+          <h2>Välj en STL-fil</h2>
+          <p>Filen läses lokalt i din webbläsare och skickas inte till någon server.</p>
+        </div>
+      </div>
+      <div id="status" class="status">Ingen modell inläst</div>
+      <div class="help">Vänster mus: rotera · Höger mus: panorera · Hjul: zoom</div>
+    </main>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { STLLoader } from "three/addons/loaders/STLLoader.js";
+
+    const viewer = document.getElementById("viewer");
+    const fileInput = document.getElementById("file");
+    const resetButton = document.getElementById("reset");
+    const empty = document.getElementById("empty");
+    const status = document.getElementById("status");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf4fbf8);
+
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100000);
+    camera.position.set(2, 2, 3);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    viewer.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.screenSpacePanning = true;
+    controls.minDistance = 0.01;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x9bb8ad, 2.2));
+    const key = new THREE.DirectionalLight(0xffffff, 2.5);
+    key.position.set(5, 8, 6);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xffffff, 1.1);
+    fill.position.set(-5, 2, -4);
+    scene.add(fill);
+
+    const grid = new THREE.GridHelper(10, 20, 0xc6ded6, 0xe1eee9);
+    grid.visible = false;
+    scene.add(grid);
+
+    let model = null;
+    let initialTarget = new THREE.Vector3();
+    let initialPosition = new THREE.Vector3(2, 2, 3);
+
+    function resize() {
+      const w = viewer.clientWidth;
+      const h = viewer.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    function fitModel(object) {
+      const box = new THREE.Box3().setFromObject(object);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxSize = Math.max(size.x, size.y, size.z) || 1;
+      const fov = THREE.MathUtils.degToRad(camera.fov);
+      const distance = (maxSize / 2) / Math.tan(fov / 2) * 1.35;
+
+      camera.position.copy(center).add(new THREE.Vector3(distance, distance * 0.75, distance));
+      camera.near = Math.max(maxSize / 10000, 0.0001);
+      camera.far = Math.max(maxSize * 100, 100);
+      camera.updateProjectionMatrix();
+
+      controls.target.copy(center);
+      controls.minDistance = maxSize * 0.02;
+      controls.maxDistance = maxSize * 20;
+      controls.update();
+
+      initialTarget.copy(center);
+      initialPosition.copy(camera.position);
+    }
+
+    function clearModel() {
+      if (!model) return;
+      scene.remove(model);
+      model.geometry?.dispose();
+      model.material?.dispose();
+      model = null;
+    }
+
+    fileInput.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith(".stl")) {
+        status.textContent = "Välj en STL-fil (.stl).";
+        return;
+      }
+
+      try {
+        status.textContent = "Läser " + file.name + "…";
+        const buffer = await file.arrayBuffer();
+        const geometry = new STLLoader().parse(buffer);
+        geometry.computeVertexNormals();
+
+        clearModel();
+
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x68c9a5,
+          roughness: 0.62,
+          metalness: 0.05
+        });
+
+        model = new THREE.Mesh(geometry, material);
+        scene.add(model);
+
+        // Center the model around its bounding-box center.
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center);
+
+        fitModel(model);
+        empty.style.display = "none";
+        status.textContent = file.name + " · " + geometry.attributes.position.count / 3 + " trianglar";
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Kunde inte läsa STL-filen.";
+      }
+    });
+
+    resetButton.addEventListener("click", () => {
+      if (!model) return;
+      camera.position.copy(initialPosition);
+      controls.target.copy(initialTarget);
+      controls.update();
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
