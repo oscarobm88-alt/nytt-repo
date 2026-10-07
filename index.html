@@ -41,6 +41,7 @@
     .dropzone { transition:.15s ease; }
     .dropzone.dragover { outline:3px solid var(--mint); outline-offset:2px; background:#e8faf3; }
     .upload-link { pointer-events:auto; color:var(--mint-dark); font-weight:700; text-decoration:underline; cursor:pointer; }
+    .toolbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:calc(100% - 24px);padding:8px;background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 20px rgba(36,120,95,.10);backdrop-filter:blur(8px);z-index:1}.view-button{border:1px solid var(--border);background:#fff;color:var(--text);min-width:42px;padding:7px 10px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.78rem}.view-button:hover{background:#eefaf5;border-color:#9bd8c3}.view-button.iso{background:var(--mint);border-color:#8ed7bd;color:#123d31}.iso-group{display:flex;gap:4px;align-items:center}.iso-group .view-button{min-width:34px;font-size:1rem;padding:7px 8px}.palette{position:absolute;top:74px;left:16px;display:flex;gap:7px;align-items:center;padding:8px 10px;background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 20px rgba(36,120,95,.10);backdrop-filter:blur(8px);z-index:1}.palette-label{color:var(--muted);font-size:.75rem;font-weight:700;margin-right:2px}.color-button{width:25px;height:25px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--border);cursor:pointer;padding:0}.color-button.active{box-shadow:0 0 0 2px var(--mint-dark)}
     .button {
       border:1px solid #8ed7bd;
       background:var(--mint);
@@ -125,7 +126,7 @@
     </header>
 
     <main>
-      <div id="viewer" class="dropzone"></div>
+      <div id="viewer" class="dropzone"></div><div class="toolbar"><button class="view-button" data-view="front">Fram</button><button class="view-button" data-view="back">Bak</button><button class="view-button" data-view="right">Höger</button><button class="view-button" data-view="left">Vänster</button><button class="view-button" data-view="top">Upp</button><button class="view-button" data-view="bottom">Ner</button><div class="iso-group"><button class="view-button" id="iso-left">←</button><button class="view-button iso" id="iso">ISO 30/30</button><button class="view-button" id="iso-right">→</button></div></div><div class="palette"><span class="palette-label">Färg</span><button class="color-button active" data-color="#111827" style="background:#111827" aria-label="Svart"></button><button class="color-button" data-color="#ffffff" style="background:#ffffff" aria-label="Vit"></button><button class="color-button" data-color="#c0392b" style="background:#c0392b" aria-label="Röd"></button><button class="color-button" data-color="#d97706" style="background:#d97706" aria-label="Orange"></button><button class="color-button" data-color="#b59b00" style="background:#b59b00" aria-label="Gul"></button><button class="color-button" data-color="#2563a6" style="background:#2563a6" aria-label="Blå"></button><button class="color-button" data-color="#6d3b8c" style="background:#6d3b8c" aria-label="Lila"></button><button class="color-button" data-color="#24785f" style="background:#24785f" aria-label="Grön"></button></div>
       <div id="empty" class="empty">
         <div class="empty-card">
           <div class="cube">◇</div>
@@ -188,6 +189,7 @@
     let model = null;
     let initialTarget = new THREE.Vector3();
     let initialPosition = new THREE.Vector3(2, 2, 3);
+    let modelRadius = 1, isoRotation = 0, selectedColor = "#111827";
 
     function resize() {
       const w = viewer.clientWidth;
@@ -219,6 +221,7 @@
 
       initialTarget.copy(center);
       initialPosition.copy(camera.position);
+      modelRadius = maxSize;
     }
 
     function clearModel() {
@@ -246,7 +249,7 @@
         clearModel();
 
         const material = new THREE.MeshStandardMaterial({
-          color: 0x68c9a5,
+          color: selectedColor,
           roughness: 0.62,
           metalness: 0.05
         });
@@ -266,6 +269,12 @@
         status.textContent = "Kunde inte läsa STL-filen.";
       }
     }
+
+    function setView(name){if(!model)return;const c=controls.target.clone(),d=Math.max(modelRadius*2.1,.1),dirs={front:[0,0,1],back:[0,0,-1],right:[1,0,0],left:[-1,0,0],top:[0,1,0],bottom:[0,-1,0]};const v=dirs[name];if(!v)return;camera.position.copy(c).add(new THREE.Vector3(...v).multiplyScalar(d));camera.up.set(0,1,0);if(name==="top"||name==="bottom")camera.up.set(0,0,-1);controls.update()}
+    function setIso(r=isoRotation){if(!model)return;isoRotation=((r%360)+360)%360;const c=controls.target.clone(),e=THREE.MathUtils.degToRad(30),a=THREE.MathUtils.degToRad(45+isoRotation),d=Math.max(modelRadius*2.1,.1);camera.position.copy(c).add(new THREE.Vector3(Math.cos(e)*Math.sin(a),Math.sin(e),Math.cos(e)*Math.cos(a)).multiplyScalar(d));camera.up.set(0,1,0);controls.update()}
+    document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+    document.getElementById("iso").addEventListener("click",()=>setIso(0));document.getElementById("iso-left").addEventListener("click",()=>setIso(isoRotation-90));document.getElementById("iso-right").addEventListener("click",()=>setIso(isoRotation+90));
+    document.querySelectorAll(".color-button").forEach(b=>b.addEventListener("click",()=>{selectedColor=b.dataset.color;if(model)model.material.color.set(selectedColor);document.querySelectorAll(".color-button").forEach(x=>x.classList.remove("active"));b.classList.add("active")}));
 
     fileInput.addEventListener("change", async (event) => {
       const file = event.target.files?.[0];
