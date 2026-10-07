@@ -55,6 +55,7 @@ AXLAR
 - Y-etikett visas vid Y-axeln.
 - Z-etikett visas vid Z-axeln.
 - Etiketterna är visuella sprites med tydliga bokstäver.
+- Etikettstorlek: 20 pt.
 
 FÄRG
 ----
