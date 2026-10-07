@@ -1,0 +1,100 @@
+STL-LÄSARE FUNKTIONELL 1
+==========================
+
+Checkpoint
+----------
+Namn: STL-läsare funktionell 1
+Branch: main
+Skapad från commit: e1006158e51ced0ff1f647bf1fcf2aa00f56660d
+Fil: index.html
+
+SYFTE
+-----
+Detta dokument beskriver grundinställningarna för STL-läsaren.
+Det är en redigerbar textspecifikation som kan användas som grund
+för framtida ändringar och export.
+
+MODELL / STL
+------------
+- STL-läsning sker lokalt i webbläsaren.
+- Filval via "Välj STL-fil".
+- Drag & drop av .stl stöds.
+- Ingen STL-fil laddas upp till en server.
+- Standardrotation: 0° (neutral grundorientering).
+- Modellens centrum används för att centrera modellen i scenen.
+- Modellen placeras mot markplanet efter inläsning.
+
+VYER
+----
+- Fram
+- Bak
+- Höger
+- Vänster
+- Upp
+- Ner
+- ISO 30/30
+- ISO rotation vänster: -90°
+- ISO rotation höger: +90°
+- Återställ vy
+
+MARKPLAN / GRID
+---------------
+- GridHelper används som markplan.
+- Markplanets Y-position: 0
+- Toggle: "Visa markplan"
+- Standardläge: PÅ
+- Toggle ska vara synlig i 3D-vyn, uppe till höger.
+
+AXLAR
+-----
+- X/Y/Z-axel visas med Three.js AxesHelper.
+- Standardläge: PÅ
+- Toggle: "Visa X/Y/Z-axel"
+- Toggle ska vara synlig i 3D-vyn, uppe till höger.
+- X-etikett visas vid X-axeln.
+- Y-etikett visas vid Y-axeln.
+- Z-etikett visas vid Z-axeln.
+- Etiketterna är visuella sprites med tydliga bokstäver.
+
+FÄRG
+----
+Standardfärg: blågrå (#5f7883)
+
+Palett:
+1. Blågrå #5f7883
+2. Röd #c0392b
+3. Orange #d97706
+4. Gul #b59b00
+5. Blå #2563a6
+6. Lila #6d3b8c
+7. Grön #24785f
+8. Vit #ffffff
+9. Svart #111827
+
+ÖVRIGA FUNKTIONER
+-----------------
+- Filnamn och antal trianglar visas i statusfältet.
+- Felmeddelande visas om filen inte är en STL.
+- OrbitControls:
+  - Vänster mus: rotera
+  - Höger mus: panorera
+  - Hjul: zoom
+- Damping är aktiverat.
+- Responsiv canvas vid fönsterstorlek.
+- Mintgrönt visuellt tema.
+
+VIKTIG CHECKPOINT-REGEL
+-----------------------
+Vid framtida ändringar ska ovanstående funktioner och inställningar
+bevaras om inte användaren uttryckligen ber om att de ska ändras.
+
+ROTATION
+--------
+Rotationen är medvetet nollställd till 0° i checkpointen.
+Nästa steg är att fastställa korrekt STL-orientering mot markplanet
+utan att ändra övriga funktioner.
+
+EXPORT / REDIGERING
+-------------------
+Detta dokument är avsett att kunna redigeras direkt i GitHub och
+användas som konfigurations- eller kravunderlag vid framtida arbete.
