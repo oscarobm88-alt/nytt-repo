@@ -88,9 +88,8 @@
         status.textContent="Läser "+file.name+"…";const buffer=await file.arrayBuffer(),geometry=new STLLoader().parse(buffer);geometry.computeVertexNormals();clearModel();
         const material=new THREE.MeshStandardMaterial({color:selectedColor,roughness:.62,metalness:.05});
         model=new THREE.Mesh(geometry,material);
-        // STL-filer har ofta Z som upp-axel medan viewern använder Y som upp-axel.
-        // Rotera därför modellen 90° runt X så att den hamnar rätt i våra vyer.
-        model.rotation.z=Math.PI/2;
+        // Neutral grundorientering – rotationsjustering görs separat efter kontroll av modellen.
+        model.rotation.z=0;
         scene.add(model);
         const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());model.position.sub(center);model.position.y+=size.y/2;
         fitModel(model);empty.style.display="none";status.textContent=file.name+" · "+geometry.attributes.position.count/3+" trianglar";
